@@ -16,11 +16,16 @@ AI-powered research application using Claude Agent SDK and web search capabiliti
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 + TypeScript + Tailwind CSS + shadcn/ui
+- **Frontend**: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4
+- **UI Components**: Radix UI + shadcn/ui + Lucide Icons
+- **Markdown Rendering**: react-markdown + rehype/remark plugins (rehype-highlight, rehype-react, rehype-sanitize, remark-breaks, remark-gfm)
 - **Backend**: Next.js API Routes
-- **AI Engine**: Claude Agent SDK (TypeScript)
+- **AI Engine**: Claude Agent SDK (TypeScript) + OpenAI SDK
 - **Database**: SQLite (Prisma ORM)
 - **Search**: Web Search via Claude Agent SDK
+- **Validation**: Zod
+- **Build Tool**: ESLint + TypeScript compiler
+- **Package Manager**: pnpm
 
 ## Getting Started
 
