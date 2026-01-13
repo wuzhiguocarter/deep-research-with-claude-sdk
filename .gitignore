@@ -41,3 +41,15 @@ yarn-error.log*
 next-env.d.ts
 
 /lib/generated/prisma
+
+# development database
+*.db
+dev.db
+prisma/dev.db
+
+# server logs
+dev-server.log
+*.log
+
+# lock files (project uses npm)
+pnpm-lock.yaml
