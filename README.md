@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Deep Research Assistant
+
+AI-powered research application using Claude Agent SDK and web search capabilities. Generate comprehensive research reports with automatic citations for any topic.
+
+## Features
+
+- **Three Research Types**:
+  - **Comparison**: Compare products, technologies, or approaches with detailed pros/cons
+  - **Analysis**: Deep dive with feature matrices, SWOT analysis, and insights
+  - **Summary**: Aggregate multiple sources and extract key points
+
+- **Real-time Progress Tracking**: Watch your research being conducted live
+- **Automatic Citations**: All sources are properly cited and linked
+- **Research History**: Browse and reload past research sessions
+- **Export Options**: Download results as Markdown files
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 + TypeScript + Tailwind CSS + shadcn/ui
+- **Backend**: Next.js API Routes
+- **AI Engine**: Claude Agent SDK (TypeScript)
+- **Database**: SQLite (Prisma ORM)
+- **Search**: Web Search via Claude Agent SDK
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ installed
+- Anthropic API key ([Get one here](https://console.anthropic.com/))
+
+### Installation
+
+1. Clone the repository and navigate to the project:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd deep-research-with-claude-sdk
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Edit `.env` and add your Anthropic API key:
+```
+ANTHROPIC_API_KEY="your-api-key-here"
+```
 
-## Learn More
+4. Initialize the database:
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Run the development server:
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage
 
-## Deploy on Vercel
+1. **Start a Research**:
+   - Navigate to the Research page
+   - Select a research type (Comparison, Analysis, or Summary)
+   - Enter your research query
+   - Click "Start Research"
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Monitor Progress**:
+   - Watch real-time updates as Claude searches, reads, and synthesizes information
+   - View the current step and progress percentage
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Review Results**:
+   - Read the comprehensive report with citations
+   - Click on source links to verify information
+   - Download the report as a Markdown file
+
+4. **Manage History**:
+   - View all past research sessions
+   - Reload previous results
+   - Delete unwanted sessions
+
+## Project Structure
+
+```
+├── app/                      # Next.js app directory
+│   ├── api/                  # API routes
+│   │   ├── research/         # Research endpoints
+│   │   └── history/          # History management
+│   ├── research/             # Research page
+│   └── page.tsx              # Landing page
+├── components/               # React components
+│   ├── ui/                   # shadcn/ui components
+│   ├── ResearchForm.tsx
+│   ├── ProgressTracker.tsx
+│   ├── ResultsViewer.tsx
+│   └── HistoryPanel.tsx
+├── lib/                      # Utilities and services
+│   ├── research/             # Research service
+│   │   ├── service.ts        # Claude Agent SDK integration
+│   │   ├── prompts.ts        # Research prompts
+│   │   └── types.ts          # TypeScript types
+│   └── db.ts                 # Prisma client
+└── prisma/                   # Database schema
+```
+
+## API Endpoints
+
+- `POST /api/research` - Start a new research task
+- `GET /api/research/[id]` - Get research results
+- `GET /api/history` - List all research sessions
+- `GET /api/history/[id]` - Get a specific session
+- `DELETE /api/history/[id]` - Delete a session
+
+## Development
+
+### Run Development Server
+```bash
+npm run dev
+```
+
+### Build for Production
+```bash
+npm run build
+```
+
+### Start Production Server
+```bash
+npm start
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `ANTHROPIC_API_KEY` | Your Anthropic API key | Yes |
+| `DATABASE_URL` | SQLite database path | No (auto-generated) |
+| `ZHIPU_API_KEY` | Zhipu AI API key for enhanced search | No |
+
+## License
+
+This project is built for educational and research purposes.
+
+## Acknowledgments
+
+- Built with [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview)
+- UI components from [shadcn/ui](https://ui.shadcn.com/)
+- Powered by [Next.js](https://nextjs.org/)
