@@ -42,10 +42,15 @@ export function HistoryPanel({ sessions, onLoadSession, onDeleteSession }: Histo
               {sessions.map((session) => (
                 <div
                   key={session.id}
-                  className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className={`flex gap-2 p-3 border rounded-lg transition-colors ${
+                    session.status === 'completed'
+                      ? 'hover:bg-muted/50 cursor-pointer'
+                      : 'hover:bg-muted/30'
+                  }`}
+                  onClick={() => session.status === 'completed' && onLoadSession(session.id)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{session.query}</p>
+                    <p className="text-sm font-medium line-clamp-2">{session.query}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge className={getStatusColor(session.status)} variant="secondary">
                         {session.status}
@@ -55,12 +60,16 @@ export function HistoryPanel({ sessions, onLoadSession, onDeleteSession }: Histo
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-2">
+                  <div className="flex flex-col gap-1 shrink-0">
                     {session.status === 'completed' && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onLoadSession(session.id)}
+                        className="h-7 px-2 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onLoadSession(session.id)
+                        }}
                       >
                         View
                       </Button>
@@ -68,7 +77,11 @@ export function HistoryPanel({ sessions, onLoadSession, onDeleteSession }: Histo
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onDeleteSession(session.id)}
+                      className="h-7 px-2 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteSession(session.id)
+                      }}
                     >
                       Delete
                     </Button>
