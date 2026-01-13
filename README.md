@@ -32,7 +32,8 @@ AI-powered research application using Claude Agent SDK and web search capabiliti
 ### Prerequisites
 
 - Node.js 18+ installed
-- Anthropic API key ([Get one here](https://console.anthropic.com/))
+- Zhipu AI API key ([Get one here](https://open.bigmodel.cn/usercenter/apikeys))
+  - The application uses Zhipu AI's Anthropic-compatible endpoint
 
 ### Installation
 
@@ -43,7 +44,7 @@ cd deep-research-with-claude-sdk
 
 2. Install dependencies:
 ```bash
-npm install
+pnpm install
 ```
 
 3. Set up environment variables:
@@ -51,9 +52,10 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` and add your Anthropic API key:
+Edit `.env` and add your Zhipu AI API key:
 ```
-ANTHROPIC_API_KEY="your-api-key-here"
+ANTHROPIC_API_KEY="your-zhipu-api-key-here"
+ANTHROPIC_BASE_URL="https://open.bigmodel.cn/api/anthropic"
 ```
 
 4. Initialize the database:
@@ -64,7 +66,7 @@ npx prisma generate
 
 5. Run the development server:
 ```bash
-npm run dev
+pnpm dev
 ```
 
 6. Open [http://localhost:3000](http://localhost:3000) in your browser
@@ -127,26 +129,26 @@ npm run dev
 
 ### Run Development Server
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ### Build for Production
 ```bash
-npm run build
+pnpm build
 ```
 
 ### Start Production Server
 ```bash
-npm start
+pnpm start
 ```
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key | Yes |
-| `DATABASE_URL` | SQLite database path | No (auto-generated) |
-| `ZHIPU_API_KEY` | Zhipu AI API key for enhanced search | No |
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ANTHROPIC_API_KEY` | Your Zhipu AI API key (used with Anthropic-compatible endpoint) | Yes | - |
+| `ANTHROPIC_BASE_URL` | Zhipu AI API endpoint URL | Yes | `https://open.bigmodel.cn/api/anthropic` |
+| `DATABASE_URL` | SQLite database path | No | `file:./dev.db` |
 
 ## License
 
