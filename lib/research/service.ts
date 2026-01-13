@@ -68,12 +68,15 @@ export class ResearchService {
         }
       }
 
+      // Clean up the result - remove any content before the first heading
+      const cleanedResult = this.cleanReportContent(fullResult)
+
       // Final result
       yield {
         status: 'completed',
         step: '✅ Research complete!',
         progress: 100,
-        result: fullResult
+        result: cleanedResult
       }
     } catch (error) {
       yield {
@@ -92,5 +95,20 @@ export class ResearchService {
     if (step.includes('Generating')) return 80
     if (step.includes('complete')) return 100
     return 10
+  }
+
+  private cleanReportContent(content: string): string {
+    if (!content) return content
+
+    // Find the first markdown heading (# ## ### ####)
+    const headingMatch = content.match(/^\s{0,3}#{1,4}\s+/m)
+
+    if (headingMatch && headingMatch.index !== undefined) {
+      // Return content starting from the first heading
+      return content.substring(headingMatch.index)
+    }
+
+    // If no heading found, return original content
+    return content
   }
 }

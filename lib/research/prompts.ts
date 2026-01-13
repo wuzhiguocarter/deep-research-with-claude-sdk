@@ -15,7 +15,9 @@ OUTPUT FORMAT:
 - Include ## headings for sections
 - Use bullet points for lists
 - Add citations as [Source X](URL)
-- End with a References section listing all sources`
+- End with a References section listing all sources
+
+IMPORTANT: Start your response directly with the first ## heading of your report. Do not include any introductory text, thinking process, or conversational filler before the report begins. Your response should begin immediately with the report title (e.g., "## Research Report Title").`
 
   const typeInstructions = {
     comparison: `
