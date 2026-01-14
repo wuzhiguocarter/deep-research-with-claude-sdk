@@ -10,6 +10,179 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==================== 认证相关（Better-Auth） ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 当前激活的组织ID（用于快速切换上下文）
+  activeOrgId   String?
+
+  // 关联
+  sessions      Session[]
+  accounts      Account[]
+  memberships   OrgMember[]
+  researches    ResearchSession[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ==================== 组织/多租户（ToB 核心） ====================
+
+model Organization {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  logo        String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // 关联
+  members      OrgMember[]
+  researches   ResearchSession[]
+  credits      OrgCredits?
+  invites      OrgInvite[]
+  transactions CreditTransaction[]
+  orders       Order[]
+  subscription OrgSubscription?
+}
+
+// ==================== 订阅系统 ====================
+
+model OrgSubscription {
+  id                  String       @id @default(cuid())
+  orgId               String       @unique
+  plan                String       @default("free") // free | pro | enterprise
+  status              String       @default("active") // active | cancelled | expired | past_due
+  currentPeriodStart  DateTime     @default(now())
+  currentPeriodEnd    DateTime?
+  cancelAtPeriodEnd   Boolean      @default(false)
+  lastCreditGrantAt   DateTime?    // 上次发放月度积分的时间
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  org                 Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model OrgMember {
+  id        String       @id @default(cuid())
+  userId    String
+  orgId     String
+  role      String       @default("member") // owner | admin | member
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+model OrgInvite {
+  id        String       @id @default(cuid())
+  orgId     String
+  email     String
+  role      String       @default("member")
+  code      String       @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+// ==================== 积分系统 ====================
+
+model OrgCredits {
+  id        String       @id @default(cuid())
+  orgId     String       @unique
+  balance   Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model CreditTransaction {
+  id          String       @id @default(cuid())
+  orgId       String
+  userId      String
+  type        String       // purchase | consume | refund | bonus
+  amount      Int          // 正数=增加，负数=消耗
+  balance     Int          // 交易后余额
+  description String?
+  metadata    String?      // JSON 格式存储额外信息
+  createdAt   DateTime     @default(now())
+
+  org         Organization @relation(fields: [orgId], references: [id])
+}
+
+// ==================== 订单系统 ====================
+
+model Order {
+  id              String       @id @default(cuid())
+  orgId           String
+  userId          String
+  type            String       // credits
+  status          String       @default("pending") // pending | paid | failed | refunded
+  amount          Int          // 金额（分）
+  credits         Int          // 购买的积分数
+  provider        String       // wechat
+  providerOrderId String?
+  qrcodeUrl       String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  paidAt          DateTime?
+
+  org             Organization @relation(fields: [orgId], references: [id])
+}
+
+// ==================== 业务数据 ====================
+
 model ResearchSession {
   id          String   @id @default(cuid())
   query       String
@@ -17,6 +190,14 @@ model ResearchSession {
   status      String   @default("pending")
   result      String?
   sources     String?
+  creditsUsed Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // 归属关系
+  userId      String
+  orgId       String
+
+  user        User         @relation(fields: [userId], references: [id])
+  org         Organization @relation(fields: [orgId], references: [id])
 }

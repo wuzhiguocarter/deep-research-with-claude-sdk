@@ -17,9 +17,9 @@ export function ResultsViewer({ result, onDownload }: ResultsViewerProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Research Results
+          研究结果
           <Button variant="outline" size="sm" onClick={onDownload}>
-            Download
+            导出 Markdown
           </Button>
         </CardTitle>
       </CardHeader>
