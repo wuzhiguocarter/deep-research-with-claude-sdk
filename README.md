@@ -1,6 +1,6 @@
 # Deep Research - 企业级 AI 研究助手
 
-一个基于 Claude Agent SDK 的企业级 ToB SaaS AI 研究平台，支持多租户、团队协作、积分系统和微信支付。
+一个基于 Claude Agent SDK 的企业级 ToB SaaS AI 研究平台，支持多租户、团队协作、订阅套餐、积分系统和微信支付。
 
 ## 🚀 功能特性
 
@@ -10,57 +10,71 @@
 - **对比研究** - 多选项对比，优缺点分析（30 积分）
 - **实时进度** - SSE 流式更新研究进度
 - **自动引用** - 自动提取和标注信息来源
+- **Markdown 导出** - 下载研究报告
 
 ### ToB SaaS 功能
-- **用户认证** - Better-Auth 实现，支持邮箱/密码、GitHub OAuth
-- **组织管理** - 多租户隔离，组织创建、成员邀请
-- **权限控制** - RBAC 角色权限（owner/admin/member）
+- **用户认证** - Better-Auth 实现邮箱/密码登录（GitHub OAuth 预留）
+- **多租户组织** - 组织创建、切换、删除，数据完全隔离
+- **成员管理** - 邀请链接、角色管理、成员移除
+- **权限控制** - RBAC 角色权限（Owner / Admin / Member）
+- **订阅套餐** - 免费版 / 专业版 / 企业版，不同功能权限
 - **积分系统** - 组织级积分池，按使用量计费
-- **微信支付** - 积分充值，扫码支付
+- **积分购买** - 支持积分包购买（模拟微信支付）
 
 ## 🛠 技术栈
 
 - **前端**: Next.js 16, React 19, TypeScript, Tailwind CSS 4
 - **UI**: shadcn/ui, Radix UI, Lucide Icons
-- **后端**: Next.js API Routes, Server Actions
-- **认证**: Better-Auth
+- **后端**: Next.js API Routes
+- **认证**: Better-Auth + Prisma Adapter
 - **数据库**: SQLite + Prisma ORM
 - **AI**: Claude Agent SDK (WebSearch, WebFetch)
-- **支付**: 微信支付 Native
 
 ## 📁 项目结构
 
 ```
 ├── app/
-│   ├── (auth)/              # 认证页面（登录/注册/邀请）
-│   ├── (marketing)/         # 营销页面（首页/定价）
+│   ├── (auth)/              # 认证页面
+│   │   ├── signin/          # 登录
+│   │   ├── signup/          # 注册
+│   │   └── invite/[code]/   # 邀请接受
+│   ├── (marketing)/         # 营销页面
+│   │   ├── page.tsx         # 落地页
+│   │   └── pricing/         # 定价页
 │   ├── dashboard/           # 用户工作台
+│   │   ├── page.tsx         # 仪表盘概览
 │   │   ├── research/        # 发起研究
 │   │   ├── history/         # 研究历史
 │   │   └── credits/         # 积分管理
-│   ├── org/                  # 组织管理
-│   └── api/                  # API 路由
-│       ├── auth/            # 认证 API
-│       ├── organization/    # 组织 API
-│       ├── research/        # 研究 API
-│       ├── credits/         # 积分 API
-│       └── payment/         # 支付 API
+│   ├── org/                 # 组织管理
+│   │   ├── page.tsx         # 组织设置
+│   │   ├── create/          # 创建组织
+│   │   └── members/         # 成员管理
+│   └── api/                 # API 路由
+│       ├── auth/            # Better-Auth 处理
+│       ├── organization/    # 组织 CRUD
+│       ├── research/        # 研究任务
+│       ├── credits/         # 积分查询
+│       ├── payment/         # 支付处理
+│       └── subscription/    # 订阅管理
 ├── components/
-│   ├── auth/                # 认证组件
-│   ├── dashboard/           # 仪表盘组件
-│   ├── marketing/           # 营销组件
-│   └── ui/                  # UI 组件库
+│   ├── auth/                # 登录/注册表单
+│   ├── dashboard/           # Header、Sidebar、OrgSwitcher
+│   ├── marketing/           # Navbar、Footer
+│   └── ui/                  # shadcn/ui 组件
 ├── lib/
-│   ├── auth.ts              # Better-Auth 配置
-│   ├── auth-client.ts       # 客户端认证
-│   ├── organization/        # 组织服务
-│   ├── credits/             # 积分服务
-│   ├── payment/             # 支付服务
-│   └── research/            # 研究服务
+│   ├── auth.ts              # Better-Auth 服务端配置
+│   ├── auth-client.ts       # Better-Auth 客户端
+│   ├── db.ts                # Prisma Client
+│   ├── organization/        # 组织服务层
+│   ├── credits/             # 积分服务层
+│   ├── subscription/        # 订阅服务层
+│   ├── payment/             # 支付服务层
+│   └── research/            # 研究服务层
 ├── config/
-│   └── index.ts             # 配置（积分规则、定价等）
+│   └── index.ts             # 统一配置（套餐、积分、权限）
 └── prisma/
-    └── schema.prisma        # 数据库模型
+    └── schema.prisma        # 数据库模型定义
 ```
 
 ## 🚀 快速开始
@@ -83,15 +97,15 @@ DATABASE_URL="file:./prisma/dev.db"
 BETTER_AUTH_SECRET="your-secret-key-here-min-32-chars"
 BETTER_AUTH_URL="http://localhost:3000"
 
-# 应用
+# 应用 URL
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
-# GitHub OAuth（可选）
-GITHUB_CLIENT_ID="your-github-client-id"
-GITHUB_CLIENT_SECRET="your-github-client-secret"
-
-# Claude AI
+# Claude AI（必需）
 ANTHROPIC_API_KEY="your-anthropic-api-key"
+
+# GitHub OAuth（可选，暂未启用）
+# GITHUB_CLIENT_ID="your-github-client-id"
+# GITHUB_CLIENT_SECRET="your-github-client-secret"
 ```
 
 ### 3. 初始化数据库
@@ -111,15 +125,16 @@ pnpm dev
 ## 📊 数据库模型
 
 ### 认证相关
-- `User` - 用户
+- `User` - 用户（含 activeOrgId 跟踪当前组织）
 - `Session` - 会话
-- `Account` - 第三方账号
+- `Account` - 第三方账号关联
 - `Verification` - 验证码
 
 ### 组织相关
 - `Organization` - 组织
-- `OrgMember` - 组织成员
+- `OrgMember` - 组织成员（含角色）
 - `OrgInvite` - 邀请链接
+- `OrgSubscription` - 组织订阅套餐
 
 ### 积分相关
 - `OrgCredits` - 组织积分余额
@@ -127,81 +142,152 @@ pnpm dev
 - `Order` - 支付订单
 
 ### 业务数据
-- `ResearchSession` - 研究会话
+- `ResearchSession` - 研究会话（关联用户和组织）
+
+## 🔐 权限系统
+
+| 权限 | Owner | Admin | Member |
+|------|:-----:|:-----:|:------:|
+| 删除组织 | ✅ | ❌ | ❌ |
+| 编辑组织信息 | ✅ | ✅ | ❌ |
+| 邀请成员 | ✅ | ✅ | ❌ |
+| 移除成员 | ✅ | ✅ | ❌ |
+| 修改成员角色 | ✅ | ❌ | ❌ |
+| 购买积分 | ✅ | ✅ | ❌ |
+| 发起研究 | ✅ | ✅ | ✅ |
+| 查看研究历史 | ✅ | ✅ | ✅ |
+| 删除所有研究 | ✅ | ❌ | ❌ |
+| 删除自己的研究 | ✅ | ✅ | ✅ |
+
+## 💎 订阅套餐
+
+| 功能 | 免费版 | 专业版 | 企业版 |
+|------|:------:|:------:|:------:|
+| 价格 | ¥0/月 | ¥299/月 | ¥999/月 |
+| 团队成员 | 3 人 | 10 人 | 无限 |
+| 月度积分 | 500 | 5,000 | 20,000 |
+| 摘要研究 | ✅ | ✅ | ✅ |
+| 深度分析 | ❌ | ✅ | ✅ |
+| 对比研究 | ❌ | ✅ | ✅ |
+| 导出 PDF | ❌ | ✅ | ✅ |
+| 优先支持 | ❌ | ✅ | ✅ |
+| 专属客服 | ❌ | ❌ | ✅ |
+
+## 💰 积分规则
+
+### 消耗规则
+| 研究类型 | 消耗积分 |
+|---------|:-------:|
+| 摘要研究 | 10 |
+| 深度分析 | 25 |
+| 对比研究 | 30 |
+
+### 积分包购买
+| 积分包 | 价格 | 赠送 |
+|-------|:----:|:----:|
+| 500 积分 | ¥49 | - |
+| 1,000 积分 | ¥99 | +100 |
+| 3,000 积分 | ¥249 | +500 |
 
 ## 🎯 API 接口
 
 ### 认证
-- `POST /api/auth/*` - Better-Auth 处理
+- `POST /api/auth/*` - Better-Auth 统一处理
 
 ### 组织
 - `GET /api/organization` - 获取用户的组织列表
 - `POST /api/organization` - 创建组织
 - `GET /api/organization/[orgId]` - 获取组织详情
+- `PATCH /api/organization/[orgId]` - 更新组织信息
+- `DELETE /api/organization/[orgId]` - 删除组织
 - `GET /api/organization/[orgId]/members` - 获取成员列表
-- `POST /api/organization/invite` - 创建邀请
-- `POST /api/organization/join` - 接受邀请
+- `PATCH /api/organization/[orgId]/members` - 更新成员角色
+- `DELETE /api/organization/[orgId]/members` - 移除成员
+- `POST /api/organization/invite` - 创建邀请链接
+- `GET /api/organization/invite/verify` - 验证邀请码
+- `POST /api/organization/join` - 接受邀请加入
+- `POST /api/organization/switch` - 切换当前组织
 
 ### 研究
-- `POST /api/research` - 发起研究（扣减积分）
-- `GET /api/research/[id]` - 获取研究状态
-- `GET /api/research/[id]/stream` - SSE 进度流
+- `POST /api/research` - 发起研究（检查套餐权限，扣减积分）
+- `GET /api/research/[id]` - 获取研究状态和结果
+- `GET /api/research/[id]/stream` - SSE 实时进度流
+
+### 历史
+- `GET /api/history` - 获取组织研究历史
+- `GET /api/history/[id]` - 获取单条研究详情
+- `DELETE /api/history/[id]` - 删除研究记录（需权限）
 
 ### 积分
-- `GET /api/credits/balance` - 获取积分余额
+- `GET /api/credits/balance` - 获取积分余额和组织信息
 - `GET /api/credits/transactions` - 获取交易记录
 
 ### 支付
 - `POST /api/payment/wechat/create` - 创建支付订单
+- `POST /api/payment/wechat/confirm` - 确认支付（模拟）
 - `GET /api/payment/wechat/status` - 查询订单状态
 
-## 🔐 权限系统
+### 订阅
+- `POST /api/subscription/upgrade` - 升级订阅套餐
 
-| 权限 | Owner | Admin | Member |
-|------|-------|-------|--------|
-| 删除组织 | ✓ | - | - |
-| 更新组织 | ✓ | ✓ | - |
-| 邀请成员 | ✓ | ✓ | - |
-| 移除成员 | ✓ | ✓ | - |
-| 购买积分 | ✓ | ✓ | - |
-| 发起研究 | ✓ | ✓ | ✓ |
-| 查看历史 | ✓ | ✓ | ✓ |
+## 🎨 页面导航
 
-## 💰 积分规则
+| 页面 | 路径 | 说明 |
+|------|-----|------|
+| 落地页 | `/` | 产品介绍 |
+| 定价页 | `/pricing` | 套餐对比和积分包 |
+| 登录 | `/signin` | 邮箱密码登录 |
+| 注册 | `/signup` | 用户注册 |
+| 邀请 | `/invite/[code]` | 接受组织邀请 |
+| 仪表盘 | `/dashboard` | 概览统计 |
+| 发起研究 | `/dashboard/research` | 创建研究任务 |
+| 研究历史 | `/dashboard/history` | 查看和管理历史 |
+| 积分管理 | `/dashboard/credits` | 余额和购买 |
+| 组织设置 | `/org` | 编辑组织信息 |
+| 创建组织 | `/org/create` | 新建组织 |
+| 成员管理 | `/org/members` | 邀请和管理成员 |
 
-| 研究类型 | 消耗积分 |
-|---------|---------|
-| 摘要研究 | 10 |
-| 深度分析 | 25 |
-| 对比研究 | 30 |
+## 📝 MVP 说明
 
-## 🎨 页面预览
+### 当前实现
+- ✅ 邮箱密码认证
+- ✅ 多租户组织管理
+- ✅ 完整权限控制（RBAC）
+- ✅ 三档订阅套餐
+- ✅ 积分系统（消耗 + 购买）
+- ✅ 研究类型限制（按套餐）
+- ✅ 成员数量限制（按套餐）
+- ✅ 研究历史管理
 
-- **首页** `/` - 产品介绍
-- **定价** `/pricing` - 套餐和积分包
-- **登录** `/signin` - 用户登录
-- **注册** `/signup` - 用户注册
-- **工作台** `/dashboard` - 用户仪表盘
-- **发起研究** `/dashboard/research` - 创建研究任务
-- **研究历史** `/dashboard/history` - 查看历史记录
-- **积分管理** `/dashboard/credits` - 充值和交易记录
-- **成员管理** `/org/members` - 邀请和管理成员
+### 暂未实现
+- ⏸️ GitHub OAuth（已预留，需配置）
+- ⏸️ 真实微信支付（当前为模拟）
+- ⏸️ 月度积分自动发放（需定时任务）
+- ⏸️ 邮件通知（邀请、支付等）
+- ⏸️ 研究历史分页
 
-## 📝 开发说明
-
-### MVP 注意事项
-
-1. **微信支付** - 当前使用模拟支付流程，生产环境需接入真实 API
-2. **邮箱验证** - MVP 阶段未开启邮箱验证
-3. **订阅系统** - 当前仅实现积分购买，未实现月度订阅
-
-### 扩展建议
-
+### 后续扩展建议
 1. 接入真实微信支付 API
-2. 添加邮箱验证功能
-3. 实现订阅计费模式
-4. 添加 API 访问密钥
-5. 实现 SSO 单点登录
+2. 配置 GitHub OAuth 应用
+3. 添加邮件通知服务
+4. 实现月度积分自动发放（Cron Job）
+5. 研究历史分页和搜索
+6. PDF 导出功能
+7. API 访问密钥
+8. SSO 单点登录
+
+## 🧪 测试流程
+
+1. 访问 http://localhost:3000 → 落地页
+2. 点击「开始免费试用」→ 注册账号
+3. 注册后自动跳转创建组织页面
+4. 创建组织后进入仪表盘
+5. 测试功能：
+   - 发起摘要研究（免费版可用）
+   - 尝试深度分析（提示需升级）
+   - 邀请成员（复制邀请链接）
+   - 购买积分（模拟支付）
+   - 切换组织（如有多个）
 
 ## 📄 License
 
