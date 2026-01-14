@@ -1,161 +1,208 @@
-# Deep Research Assistant
+# Deep Research - 企业级 AI 研究助手
 
-AI-powered research application using Claude Agent SDK and web search capabilities. Generate comprehensive research reports with automatic citations for any topic.
+一个基于 Claude Agent SDK 的企业级 ToB SaaS AI 研究平台，支持多租户、团队协作、积分系统和微信支付。
 
-## Features
+## 🚀 功能特性
 
-- **Three Research Types**:
-  - **Comparison**: Compare products, technologies, or approaches with detailed pros/cons
-  - **Analysis**: Deep dive with feature matrices, SWOT analysis, and insights
-  - **Summary**: Aggregate multiple sources and extract key points
+### 核心研究功能
+- **摘要研究** - 快速提取关键信息，生成简洁摘要（10 积分）
+- **深度分析** - 全面分析，包含 SWOT 和功能矩阵（25 积分）
+- **对比研究** - 多选项对比，优缺点分析（30 积分）
+- **实时进度** - SSE 流式更新研究进度
+- **自动引用** - 自动提取和标注信息来源
 
-- **Real-time Progress Tracking**: Watch your research being conducted live
-- **Automatic Citations**: All sources are properly cited and linked
-- **Research History**: Browse and reload past research sessions
-- **Export Options**: Download results as Markdown files
+### ToB SaaS 功能
+- **用户认证** - Better-Auth 实现，支持邮箱/密码、GitHub OAuth
+- **组织管理** - 多租户隔离，组织创建、成员邀请
+- **权限控制** - RBAC 角色权限（owner/admin/member）
+- **积分系统** - 组织级积分池，按使用量计费
+- **微信支付** - 积分充值，扫码支付
 
-## Tech Stack
+## 🛠 技术栈
 
-- **Frontend**: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4
-- **UI Components**: Radix UI + shadcn/ui + Lucide Icons
-- **Markdown Rendering**: react-markdown + rehype/remark plugins (rehype-highlight, rehype-react, rehype-sanitize, remark-breaks, remark-gfm)
-- **Backend**: Next.js API Routes
-- **AI Engine**: Claude Agent SDK (TypeScript) + OpenAI SDK
-- **Database**: SQLite (Prisma ORM)
-- **Search**: Web Search via Claude Agent SDK
-- **Validation**: Zod
-- **Build Tool**: ESLint + TypeScript compiler
-- **Package Manager**: pnpm
+- **前端**: Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- **UI**: shadcn/ui, Radix UI, Lucide Icons
+- **后端**: Next.js API Routes, Server Actions
+- **认证**: Better-Auth
+- **数据库**: SQLite + Prisma ORM
+- **AI**: Claude Agent SDK (WebSearch, WebFetch)
+- **支付**: 微信支付 Native
 
-## Getting Started
+## 📁 项目结构
 
-### Prerequisites
-
-- Node.js 18+ installed
-- Zhipu AI API key ([Get one here](https://open.bigmodel.cn/usercenter/apikeys))
-  - The application uses Zhipu AI's Anthropic-compatible endpoint
-
-### Installation
-
-1. Clone the repository and navigate to the project:
-```bash
-cd deep-research-with-claude-sdk
+```
+├── app/
+│   ├── (auth)/              # 认证页面（登录/注册/邀请）
+│   ├── (marketing)/         # 营销页面（首页/定价）
+│   ├── dashboard/           # 用户工作台
+│   │   ├── research/        # 发起研究
+│   │   ├── history/         # 研究历史
+│   │   └── credits/         # 积分管理
+│   ├── org/                  # 组织管理
+│   └── api/                  # API 路由
+│       ├── auth/            # 认证 API
+│       ├── organization/    # 组织 API
+│       ├── research/        # 研究 API
+│       ├── credits/         # 积分 API
+│       └── payment/         # 支付 API
+├── components/
+│   ├── auth/                # 认证组件
+│   ├── dashboard/           # 仪表盘组件
+│   ├── marketing/           # 营销组件
+│   └── ui/                  # UI 组件库
+├── lib/
+│   ├── auth.ts              # Better-Auth 配置
+│   ├── auth-client.ts       # 客户端认证
+│   ├── organization/        # 组织服务
+│   ├── credits/             # 积分服务
+│   ├── payment/             # 支付服务
+│   └── research/            # 研究服务
+├── config/
+│   └── index.ts             # 配置（积分规则、定价等）
+└── prisma/
+    └── schema.prisma        # 数据库模型
 ```
 
-2. Install dependencies:
+## 🚀 快速开始
+
+### 1. 安装依赖
+
 ```bash
 pnpm install
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env
+### 2. 配置环境变量
+
+创建 `.env` 文件：
+
+```env
+# 数据库
+DATABASE_URL="file:./prisma/dev.db"
+
+# Better Auth
+BETTER_AUTH_SECRET="your-secret-key-here-min-32-chars"
+BETTER_AUTH_URL="http://localhost:3000"
+
+# 应用
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# GitHub OAuth（可选）
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
+
+# Claude AI
+ANTHROPIC_API_KEY="your-anthropic-api-key"
 ```
 
-Edit `.env` and add your Zhipu AI API key:
-```
-ANTHROPIC_API_KEY="your-zhipu-api-key-here"
-ANTHROPIC_BASE_URL="https://open.bigmodel.cn/api/anthropic"
-```
+### 3. 初始化数据库
 
-4. Initialize the database:
 ```bash
 npx prisma migrate dev
-npx prisma generate
 ```
 
-5. Run the development server:
+### 4. 启动开发服务器
+
 ```bash
 pnpm dev
 ```
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser
+访问 http://localhost:3000
 
-## Usage
+## 📊 数据库模型
 
-1. **Start a Research**:
-   - Navigate to the Research page
-   - Select a research type (Comparison, Analysis, or Summary)
-   - Enter your research query
-   - Click "Start Research"
+### 认证相关
+- `User` - 用户
+- `Session` - 会话
+- `Account` - 第三方账号
+- `Verification` - 验证码
 
-2. **Monitor Progress**:
-   - Watch real-time updates as Claude searches, reads, and synthesizes information
-   - View the current step and progress percentage
+### 组织相关
+- `Organization` - 组织
+- `OrgMember` - 组织成员
+- `OrgInvite` - 邀请链接
 
-3. **Review Results**:
-   - Read the comprehensive report with citations
-   - Click on source links to verify information
-   - Download the report as a Markdown file
+### 积分相关
+- `OrgCredits` - 组织积分余额
+- `CreditTransaction` - 积分交易记录
+- `Order` - 支付订单
 
-4. **Manage History**:
-   - View all past research sessions
-   - Reload previous results
-   - Delete unwanted sessions
+### 业务数据
+- `ResearchSession` - 研究会话
 
-## Project Structure
+## 🎯 API 接口
 
-```
-├── app/                      # Next.js app directory
-│   ├── api/                  # API routes
-│   │   ├── research/         # Research endpoints
-│   │   └── history/          # History management
-│   ├── research/             # Research page
-│   └── page.tsx              # Landing page
-├── components/               # React components
-│   ├── ui/                   # shadcn/ui components
-│   ├── ResearchForm.tsx
-│   ├── ProgressTracker.tsx
-│   ├── ResultsViewer.tsx
-│   └── HistoryPanel.tsx
-├── lib/                      # Utilities and services
-│   ├── research/             # Research service
-│   │   ├── service.ts        # Claude Agent SDK integration
-│   │   ├── prompts.ts        # Research prompts
-│   │   └── types.ts          # TypeScript types
-│   └── db.ts                 # Prisma client
-└── prisma/                   # Database schema
-```
+### 认证
+- `POST /api/auth/*` - Better-Auth 处理
 
-## API Endpoints
+### 组织
+- `GET /api/organization` - 获取用户的组织列表
+- `POST /api/organization` - 创建组织
+- `GET /api/organization/[orgId]` - 获取组织详情
+- `GET /api/organization/[orgId]/members` - 获取成员列表
+- `POST /api/organization/invite` - 创建邀请
+- `POST /api/organization/join` - 接受邀请
 
-- `POST /api/research` - Start a new research task
-- `GET /api/research/[id]` - Get research results
-- `GET /api/history` - List all research sessions
-- `GET /api/history/[id]` - Get a specific session
-- `DELETE /api/history/[id]` - Delete a session
+### 研究
+- `POST /api/research` - 发起研究（扣减积分）
+- `GET /api/research/[id]` - 获取研究状态
+- `GET /api/research/[id]/stream` - SSE 进度流
 
-## Development
+### 积分
+- `GET /api/credits/balance` - 获取积分余额
+- `GET /api/credits/transactions` - 获取交易记录
 
-### Run Development Server
-```bash
-pnpm dev
-```
+### 支付
+- `POST /api/payment/wechat/create` - 创建支付订单
+- `GET /api/payment/wechat/status` - 查询订单状态
 
-### Build for Production
-```bash
-pnpm build
-```
+## 🔐 权限系统
 
-### Start Production Server
-```bash
-pnpm start
-```
+| 权限 | Owner | Admin | Member |
+|------|-------|-------|--------|
+| 删除组织 | ✓ | - | - |
+| 更新组织 | ✓ | ✓ | - |
+| 邀请成员 | ✓ | ✓ | - |
+| 移除成员 | ✓ | ✓ | - |
+| 购买积分 | ✓ | ✓ | - |
+| 发起研究 | ✓ | ✓ | ✓ |
+| 查看历史 | ✓ | ✓ | ✓ |
 
-## Environment Variables
+## 💰 积分规则
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ANTHROPIC_API_KEY` | Your Zhipu AI API key (used with Anthropic-compatible endpoint) | Yes | - |
-| `ANTHROPIC_BASE_URL` | Zhipu AI API endpoint URL | Yes | `https://open.bigmodel.cn/api/anthropic` |
-| `DATABASE_URL` | SQLite database path | No | `file:./dev.db` |
+| 研究类型 | 消耗积分 |
+|---------|---------|
+| 摘要研究 | 10 |
+| 深度分析 | 25 |
+| 对比研究 | 30 |
 
-## License
+## 🎨 页面预览
 
-This project is built for educational and research purposes.
+- **首页** `/` - 产品介绍
+- **定价** `/pricing` - 套餐和积分包
+- **登录** `/signin` - 用户登录
+- **注册** `/signup` - 用户注册
+- **工作台** `/dashboard` - 用户仪表盘
+- **发起研究** `/dashboard/research` - 创建研究任务
+- **研究历史** `/dashboard/history` - 查看历史记录
+- **积分管理** `/dashboard/credits` - 充值和交易记录
+- **成员管理** `/org/members` - 邀请和管理成员
 
-## Acknowledgments
+## 📝 开发说明
 
-- Built with [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview)
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
-- Powered by [Next.js](https://nextjs.org/)
+### MVP 注意事项
+
+1. **微信支付** - 当前使用模拟支付流程，生产环境需接入真实 API
+2. **邮箱验证** - MVP 阶段未开启邮箱验证
+3. **订阅系统** - 当前仅实现积分购买，未实现月度订阅
+
+### 扩展建议
+
+1. 接入真实微信支付 API
+2. 添加邮箱验证功能
+3. 实现订阅计费模式
+4. 添加 API 访问密钥
+5. 实现 SSO 单点登录
+
+## 📄 License
+
+MIT

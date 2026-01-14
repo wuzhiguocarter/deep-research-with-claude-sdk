@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'import { useMemo } from 'react'
+import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -98,10 +98,10 @@ export function MarkdownDisplay({ markdown, onDownload }: MarkdownDisplayProps) 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Research Results
+          研究结果
           {onDownload && (
             <Button variant="outline" size="sm" onClick={onDownload}>
-              Download
+              导出 Markdown
             </Button>
           )}
         </CardTitle>
