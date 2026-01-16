@@ -199,9 +199,9 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col">
-      <Card className="flex-1 flex flex-col h-full m-0 rounded-none border-0">
-        <CardHeader className="border-b px-6 py-4">
+    <div className="fixed inset-0 bg-background z-50 flex flex-col h-screen">
+      <Card className="flex-1 flex flex-col h-full m-0 rounded-none border-0 overflow-hidden">
+        <CardHeader className="border-b px-6 py-4 shrink-0">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold">{session.query}</h1>
@@ -244,8 +244,8 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 p-0">
-          <ScrollArea className="flex-1 w-full">
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <ScrollArea className="h-full w-full">
             <div className="p-8 max-w-5xl mx-auto">
               <div
                 ref={contentRef}
