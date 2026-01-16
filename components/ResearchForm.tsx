@@ -14,7 +14,7 @@ interface ResearchFormProps {
 
 export function ResearchForm({ onSubmit, isLoading }: ResearchFormProps) {
   const [query, setQuery] = useState('')
-  const [type, setType] = useState<ResearchType>('summary')
+  const [type, setType] = useState<ResearchType>('analysis')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
