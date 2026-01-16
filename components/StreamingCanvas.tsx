@@ -98,9 +98,9 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
     setIsExporting(true)
 
     try {
-      // 动态导入html2pdf以避免SSR问题
-      const html2pdfModule = await import('html2pdf.js')
-      const html2pdf = html2pdfModule.default || html2pdfModule
+      // 动态导入html2canvas-pro和jspdf以避免SSR问题
+      const html2canvas = (await import('html2canvas-pro')).default
+      const { default: jsPDF } = await import('jspdf')
 
       // 创建临时容器用于PDF生成
       const element = contentRef.current.cloneNode(true) as HTMLElement
@@ -133,28 +133,44 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
 
       document.body.appendChild(tempContainer)
 
-      // 配置PDF选项
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename: `research-${sessionId || 'live'}-${Date.now()}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          logging: false
-        },
-        jsPDF: {
-          unit: 'mm' as const,
-          format: 'a4' as const,
-          orientation: 'portrait' as const
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      // 生成canvas
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      })
+
+      // 创建PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      // 计算尺寸
+      const imgWidth = 210 // A4 宽度 (mm)
+      const pageHeight = 297 // A4 高度 (mm)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+
+      // 添加第一页
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      // 处理多页
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
       }
 
-      // 生成PDF
-      await html2pdf().set(opt).from(tempContainer).save()
+      // 保存PDF
+      const filename = `research-${sessionId || 'live'}-${Date.now()}.pdf`
+      pdf.save(filename)
 
+      // 清理临时容器
       document.body.removeChild(tempContainer)
     } catch (error) {
       console.error('PDF导出失败:', error)
