@@ -10,14 +10,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { Maximize2, Minimize2, Download, FileText, File } from 'lucide-react'
+import { Maximize2, Minimize2, Download, FileText, File, Share2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { copyShareLink } from '@/lib/share'
 
 interface ResultsViewerProps {
   result: string
   query?: string
+  sessionId?: string
 }
 
-export function ResultsViewer({ result, query }: ResultsViewerProps) {
+export function ResultsViewer({ result, query, sessionId }: ResultsViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -114,6 +117,21 @@ export function ResultsViewer({ result, query }: ResultsViewerProps) {
     }
   }, [result, query])
 
+  // 分享研究报告
+  const handleShare = useCallback(async () => {
+    if (!sessionId) return
+
+    const success = await copyShareLink(sessionId)
+
+    if (success) {
+      toast.success('分享链接已复制到剪贴板', {
+        description: '您现在可以分享这个研究报告了'
+      })
+    } else {
+      toast.error('复制失败，请重试')
+    }
+  }, [sessionId])
+
   // 监听全屏状态变化
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -172,6 +190,15 @@ export function ResultsViewer({ result, query }: ResultsViewerProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleShare}
+                disabled={!sessionId}
+                title="复制分享链接"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"

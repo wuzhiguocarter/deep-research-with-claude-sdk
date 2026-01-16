@@ -11,7 +11,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Maximize2, Minimize2, Download, FileText, File } from 'lucide-react'
+import { Maximize2, Minimize2, Download, FileText, File, Share2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { copyShareLink } from '@/lib/share'
 
 interface StreamingCanvasProps {
   sessionId: string | null
@@ -129,6 +131,21 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
       setIsExporting(false)
     }
   }, [content, sessionId])
+
+  // 分享研究报告
+  const handleShare = useCallback(async () => {
+    if (!sessionId) return
+
+    const success = await copyShareLink(sessionId)
+
+    if (success) {
+      toast.success('分享链接已复制到剪贴板', {
+        description: '您现在可以分享这个研究报告了'
+      })
+    } else {
+      toast.error('复制失败，请重试')
+    }
+  }, [sessionId])
 
   // 监听全屏状态变化
   useEffect(() => {
@@ -353,6 +370,15 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleShare}
+                disabled={!sessionId}
+                title="复制分享链接"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"

@@ -5,6 +5,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ResearchSession } from '@/lib/research/types'
+import { Share } from 'lucide-react'
+import { toast } from 'sonner'
+import { copyShareLink } from '@/lib/share'
 
 interface HistoryPanelProps {
   sessions: ResearchSession[]
@@ -23,6 +26,20 @@ export function HistoryPanel({ sessions, onLoadSession, onDeleteSession }: Histo
         return 'bg-red-500'
       default:
         return 'bg-gray-500'
+    }
+  }
+
+  const handleShare = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    const success = await copyShareLink(sessionId)
+
+    if (success) {
+      toast.success('分享链接已复制到剪贴板', {
+        description: '您现在可以分享这个研究报告了'
+      })
+    } else {
+      toast.error('复制失败，请重试')
     }
   }
 
@@ -72,6 +89,18 @@ export function HistoryPanel({ sessions, onLoadSession, onDeleteSession }: Histo
                         }}
                       >
                         View
+                      </Button>
+                    )}
+                    {session.status === 'completed' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={(e) => handleShare(session.id, e)}
+                        title="复制分享链接"
+                      >
+                        <Share className="h-3 w-3 mr-1" />
+                        Share
                       </Button>
                     )}
                     <Button

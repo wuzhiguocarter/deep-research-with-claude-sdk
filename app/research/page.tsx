@@ -105,12 +105,12 @@ export default function ResearchPage() {
           <ResearchForm onSubmit={startResearch} isLoading={isLoading} />
 
           {isStreaming ? (
-            <StreamingCanvas 
+            <StreamingCanvas
               sessionId={currentSession?.id || null}
               isActive={isStreaming}
             />
           ) : currentSession?.result && currentSession.status === 'completed' ? (
-            <ResultsViewer result={currentSession.result} query={currentSession.query} />
+            <ResultsViewer result={currentSession.result} query={currentSession.query} sessionId={currentSession.id} />
           ) : null}
         </div>
 
