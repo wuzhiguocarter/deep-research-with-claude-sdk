@@ -5,16 +5,25 @@ import { ResearchForm } from '@/components/ResearchForm'
 import { ResultsViewer } from '@/components/ResultsViewer'
 import { StreamingCanvas } from '@/components/StreamingCanvas'
 import { HistoryPanel } from '@/components/HistoryPanel'
+import { SharedReportViewer } from '@/components/SharedReportViewer'
 import { ResearchType, ResearchSession } from '@/lib/research/types'
+import { getSharedSessionId } from '@/lib/share'
 
 export default function ResearchPage() {
   const [currentSession, setCurrentSession] = useState<ResearchSession | null>(null)
   const [history, setHistory] = useState<ResearchSession[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [sharedSessionId, setSharedSessionId] = useState<string | null>(null)
 
   useEffect(() => {
-    loadHistory()
+    // 检查是否为分享链接
+    const shareId = getSharedSessionId()
+    if (shareId) {
+      setSharedSessionId(shareId)
+    } else {
+      loadHistory()
+    }
   }, [])
 
   const loadHistory = async () => {
@@ -89,6 +98,11 @@ export default function ResearchPage() {
     } catch (error) {
       console.error('Failed to delete session:', error)
     }
+  }
+
+  // 如果是分享链接，显示全屏分享视图
+  if (sharedSessionId) {
+    return <SharedReportViewer sessionId={sharedSessionId} />
   }
 
   return (
