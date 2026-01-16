@@ -3,7 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { Maximize2, Minimize2 } from 'lucide-react'
 
 interface ResultsViewerProps {
   result: string
@@ -11,27 +12,113 @@ interface ResultsViewerProps {
 }
 
 export function ResultsViewer({ result, onDownload }: ResultsViewerProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // 进入全屏
+  const enterFullscreen = useCallback(() => {
+    if (containerRef.current) {
+      if (containerRef.current.requestFullscreen) {
+        containerRef.current.requestFullscreen()
+      } else if ((containerRef.current as any).webkitRequestFullscreen) {
+        (containerRef.current as any).webkitRequestFullscreen()
+      } else if ((containerRef.current as any).mozRequestFullScreen) {
+        (containerRef.current as any).mozRequestFullScreen()
+      } else if ((containerRef.current as any).msRequestFullscreen) {
+        (containerRef.current as any).msRequestFullscreen()
+      }
+    }
+  }, [])
+
+  // 退出全屏
+  const exitFullscreen = useCallback(() => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen()
+    } else if ((document as any).mozCancelFullScreen) {
+      (document as any).mozCancelFullScreen()
+    } else if ((document as any).msExitFullscreen) {
+      (document as any).msExitFullscreen()
+    }
+  }, [])
+
+  // 切换全屏
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      exitFullscreen()
+    } else {
+      enterFullscreen()
+    }
+  }, [isFullscreen, enterFullscreen, exitFullscreen])
+
+  // 监听全屏状态变化
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isCurrentlyFullscreen)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('msfullscreenchange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
   const formattedContent = useMemo(() => formatMarkdown(result), [result])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          Research Results
-          <Button variant="outline" size="sm" onClick={onDownload}>
-            Download
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[600px] w-full rounded-md border p-4">
-          <div 
-            className="prose prose-sm max-w-none prose-headings:font-bold prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:text-pink-600 prose-pre:bg-muted prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground"
-            dangerouslySetInnerHTML={{ __html: formattedContent }}
-          />
-        </ScrollArea>
-      </CardContent>
-    </Card>
+    <div
+      ref={containerRef}
+      className={isFullscreen
+        ? 'fixed inset-0 z-50 bg-background p-4 flex flex-col'
+        : ''
+      }
+    >
+      <Card className={isFullscreen ? 'flex-1 flex flex-col h-full' : ''}>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Research Results</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={onDownload}>
+                Download
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? '退出全屏' : '全屏'}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={isFullscreen ? 'flex-1 flex flex-col min-h-0' : ''}>
+          <ScrollArea className={isFullscreen
+            ? 'flex-1 w-full rounded-md border p-4 bg-background min-h-0'
+            : 'h-[600px] w-full rounded-md border p-4'
+          }>
+            <div
+              className="prose prose-sm max-w-none prose-headings:font-bold prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:text-pink-600 prose-pre:bg-muted prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground"
+              dangerouslySetInnerHTML={{ __html: formattedContent }}
+            />
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
