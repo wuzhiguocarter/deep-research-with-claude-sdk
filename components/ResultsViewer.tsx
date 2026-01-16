@@ -77,85 +77,36 @@ export function ResultsViewer({ result, query }: ResultsViewerProps) {
 
   // 导出为PDF
   const exportPDF = useCallback(async () => {
-    if (!contentRef.current || !result) return
+    if (!result) return
 
     setIsExporting(true)
 
     try {
-      // 动态导入html2canvas-pro和jspdf以避免SSR问题
-      const html2canvas = (await import('html2canvas-pro')).default
-      const { default: jsPDF } = await import('jspdf')
+      // 动态导入 @react-pdf/renderer
+      const { pdf } = await import('@react-pdf/renderer')
+      const { ResearchPDF } = await import('@/components/ResearchPDF')
 
-      // 创建临时容器用于PDF生成
-      const element = contentRef.current.cloneNode(true) as HTMLElement
-      const tempContainer = document.createElement('div')
-      tempContainer.style.position = 'absolute'
-      tempContainer.style.left = '-9999px'
-      tempContainer.style.width = '210mm'  // A4宽度
-      tempContainer.style.padding = '20mm'
-      tempContainer.style.backgroundColor = '#ffffff'
-      tempContainer.style.color = '#000000'
-      tempContainer.className = 'prose prose-sm max-w-none'
-      tempContainer.innerHTML = element.innerHTML
+      // 创建 PDF 文档
+      const pdfDoc = pdf(
+        <ResearchPDF
+          title={query || '研究报告'}
+          content={result}
+          date={new Date().toLocaleString('zh-CN')}
+        />
+      )
 
-      // 添加标题
-      const title = document.createElement('h1')
-      title.textContent = query || '研究报告'
-      title.style.fontSize = '24px'
-      title.style.fontWeight = 'bold'
-      title.style.marginBottom = '20px'
-      title.style.color = '#000000'
-      tempContainer.insertBefore(title, tempContainer.firstChild)
+      // 生成 Blob
+      const blob = await pdfDoc.toBlob()
 
-      // 添加日期
-      const date = document.createElement('p')
-      date.textContent = `生成时间: ${new Date().toLocaleString('zh-CN')}`
-      date.style.fontSize = '12px'
-      date.style.color = '#666666'
-      date.style.marginBottom = '20px'
-      tempContainer.insertBefore(date, title.nextSibling)
-
-      document.body.appendChild(tempContainer)
-
-      // 生成canvas
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        logging: false
-      })
-
-      // 创建PDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      })
-
-      // 计算尺寸
-      const imgWidth = 210 // A4 宽度 (mm)
-      const pageHeight = 297 // A4 高度 (mm)
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
-      let position = 0
-
-      // 添加第一页
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      // 处理多页
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
-
-      // 保存PDF
-      const filename = `research-${query ? query.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-') : 'export'}-${Date.now()}.pdf`
-      pdf.save(filename)
-
-      // 清理临时容器
-      document.body.removeChild(tempContainer)
+      // 下载 PDF
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `research-${query ? query.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-') : 'export'}-${Date.now()}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
     } catch (error) {
       console.error('PDF导出失败:', error)
     } finally {
