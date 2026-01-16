@@ -73,54 +73,44 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
   // 滚动监听 - 更新当前激活的标题
   useEffect(() => {
     const scrollContainer = scrollAreaRef.current
-    if (!scrollContainer) return
+    if (!scrollContainer || formattedContent.headings.length === 0) return
 
-    const handleScroll = () => {
-      const headings = formattedContent.headings
-      if (headings.length === 0) return
+    // 使用 IntersectionObserver 更精确地检测可见标题
+    const observerOptions = {
+      root: scrollContainer,
+      rootMargin: '-100px 0px -70% 0px', // 顶部偏移100px，底部留30%空间
+      threshold: 0
+    }
 
-      // 获取所有标题元素
-      const headingElements = headings
-        .map(h => document.getElementById(h.id))
-        .filter(Boolean) as HTMLElement[]
+    const observer = new IntersectionObserver((entries) => {
+      // 找到所有相交的标题
+      const intersectingHeadings = entries
+        .filter(entry => entry.isIntersecting)
+        .map(entry => entry.target.id)
 
-      if (headingElements.length === 0) return
-
-      // 找到当前可见的标题
-      const scrollTop = scrollContainer.scrollTop
-
-      let activeId = headings[0].id
-
-      for (let i = headingElements.length - 1; i >= 0; i--) {
-        const element = headingElements[i]
-        if (!element) continue
-
-        const elementTop = element.offsetTop - scrollContainer.offsetTop
-
-        if (elementTop <= scrollTop + 150) {
-          activeId = headings[i].id
-          break
-        }
+      if (intersectingHeadings.length > 0) {
+        // 使用最后一个相交的标题（最靠下的那个）
+        const activeId = intersectingHeadings[intersectingHeadings.length - 1]
+        setActiveHeading(activeId)
       }
+    }, observerOptions)
 
-      setActiveHeading(activeId)
+    // 观察所有标题元素
+    const headingElements = formattedContent.headings
+      .map(h => document.getElementById(h.id))
+      .filter(Boolean) as HTMLElement[]
+
+    headingElements.forEach(element => {
+      observer.observe(element)
+    })
+
+    // 初始化时设置第一个标题为激活状态
+    if (headingElements.length > 0) {
+      setActiveHeading(formattedContent.headings[0].id)
     }
-
-    // 使用防抖优化性能
-    let timeoutId: NodeJS.Timeout
-    const debouncedScroll = () => {
-      clearTimeout(timeoutId)
-      timeoutId = setTimeout(handleScroll, 50)
-    }
-
-    scrollContainer.addEventListener('scroll', debouncedScroll)
-    // 延迟执行初始化，确保 DOM 已渲染
-    const initTimer = setTimeout(handleScroll, 100)
 
     return () => {
-      scrollContainer.removeEventListener('scroll', debouncedScroll)
-      clearTimeout(timeoutId)
-      clearTimeout(initTimer)
+      observer.disconnect()
     }
   }, [formattedContent.headings])
 
