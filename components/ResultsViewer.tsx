@@ -13,6 +13,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { Maximize2, Minimize2, Download, FileText, File, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyShareLink } from '@/lib/share'
+import { TableOfContents, extractHeadings, addHeadingIds, type Heading } from '@/components/TableOfContents'
 
 interface ResultsViewerProps {
   result: string
@@ -23,8 +24,11 @@ interface ResultsViewerProps {
 export function ResultsViewer({ result, query, sessionId }: ResultsViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [activeHeading, setActiveHeading] = useState<string>('')
+
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // 进入全屏
   const enterFullscreen = useCallback(() => {
@@ -132,6 +136,76 @@ export function ResultsViewer({ result, query, sessionId }: ResultsViewerProps) 
     }
   }, [sessionId])
 
+  // 格式化内容并提取标题
+  const formattedContent = useMemo(() => {
+    if (!result) return { html: '', headings: [] }
+
+    const html = formatMarkdown(result)
+    const htmlWithIds = addHeadingIds(html)
+    const headings = extractHeadings(htmlWithIds)
+
+    return { html: htmlWithIds, headings }
+  }, [result])
+
+  // 全屏模式下的滚动监听 - 更新当前激活的标题
+  useEffect(() => {
+    if (!isFullscreen) return
+
+    const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement
+    if (!scrollContainer || formattedContent.headings.length === 0) return
+
+    // 使用 IntersectionObserver 更精确地检测可见标题
+    const observerOptions = {
+      root: scrollContainer,
+      rootMargin: '-100px 0px -70% 0px',
+      threshold: 0
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const intersectingHeadings = entries
+        .filter(entry => entry.isIntersecting)
+        .map(entry => entry.target.id)
+
+      if (intersectingHeadings.length > 0) {
+        const activeId = intersectingHeadings[intersectingHeadings.length - 1]
+        setActiveHeading(activeId)
+      }
+    }, observerOptions)
+
+    const headingElements = formattedContent.headings
+      .map(h => document.getElementById(h.id))
+      .filter(Boolean) as HTMLElement[]
+
+    headingElements.forEach(element => {
+      observer.observe(element)
+    })
+
+    if (headingElements.length > 0) {
+      setActiveHeading(formattedContent.headings[0].id)
+    }
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [isFullscreen, formattedContent.headings])
+
+  // 点击目录项滚动到对应位置
+  const handleHeadingClick = useCallback((headingId: string) => {
+    const element = document.getElementById(headingId)
+    const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement
+
+    if (element && scrollContainer) {
+      const elementTop = element.offsetTop - (scrollRef.current?.offsetTop || 0)
+
+      scrollContainer.scrollTo({
+        top: elementTop - 100,
+        behavior: 'smooth'
+      })
+
+      setActiveHeading(headingId)
+    }
+  }, [])
+
   // 监听全屏状态变化
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -157,8 +231,6 @@ export function ResultsViewer({ result, query, sessionId }: ResultsViewerProps) 
     }
   }, [])
 
-  const formattedContent = useMemo(() => formatMarkdown(result), [result])
-
   return (
     <div
       ref={containerRef}
@@ -167,7 +239,7 @@ export function ResultsViewer({ result, query, sessionId }: ResultsViewerProps) 
         : ''
       }
     >
-      <Card className={isFullscreen ? 'flex-1 flex flex-col h-full' : ''}>
+      <Card className={isFullscreen ? 'flex-1 flex flex-col h-full overflow-hidden' : ''}>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Research Results</span>
@@ -210,17 +282,31 @@ export function ResultsViewer({ result, query, sessionId }: ResultsViewerProps) 
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className={isFullscreen ? 'flex-1 flex flex-col min-h-0' : ''}>
-          <ScrollArea className={isFullscreen
-            ? 'flex-1 w-full rounded-md border p-4 bg-background min-h-0'
-            : 'h-[600px] w-full rounded-md border p-4'
-          }>
-            <div
-              ref={contentRef}
-              className="prose prose-sm max-w-none prose-headings:font-bold prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:text-pink-600 prose-pre:bg-muted prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: formattedContent }}
-            />
-          </ScrollArea>
+        <CardContent className={isFullscreen ? 'flex-1 flex flex-col min-h-0 p-0' : ''}>
+          {/* Content area with TOC in fullscreen */}
+          <div className={isFullscreen ? 'flex-1 flex overflow-hidden' : ''}>
+            <ScrollArea className={isFullscreen
+              ? 'flex-1 w-full rounded-md border p-4 bg-background min-h-0'
+              : 'h-[600px] w-full rounded-md border p-4'
+            }>
+              <div ref={scrollRef}>
+                <div
+                  ref={contentRef}
+                  className="prose prose-sm max-w-none prose-headings:font-bold prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:text-pink-600 prose-pre:bg-muted prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: formattedContent.html }}
+                />
+              </div>
+            </ScrollArea>
+
+            {/* TOC in fullscreen mode */}
+            {isFullscreen && formattedContent.headings.length > 0 && (
+              <TableOfContents
+                headings={formattedContent.headings}
+                activeId={activeHeading}
+                onHeadingClick={handleHeadingClick}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -231,7 +317,7 @@ function formatMarkdown(text: string): string {
   if (!text) return ''
 
   let formatted = text
-  
+
   // Escape HTML tags first
   formatted = formatted.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -258,24 +344,24 @@ function formatMarkdown(text: string): string {
   const lines = formatted.split('\n')
   let inTable = false
   let tableRows: string[] = []
-  
+
   const processedLines = lines.map(line => {
     // Check if table row
     if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
       const cells = line.split('|').filter(cell => cell.trim() !== '')
       const isHeader = cells.every(cell => cell.trim().match(/^:.+:\*$/) || line.includes('---'))
-      
+
       if (!inTable) {
         inTable = true
         const headerCells = cells.map(cell => cell.trim().replace(/^:+|:+$/g, ''))
         tableRows = [`<table class="w-full border-collapse my-4"><thead><tr>${headerCells.map(c => `<th class="border border-border px-4 py-2 text-left font-semibold">${c}</th>`).join('')}</tr></thead><tbody>`]
         return ''
       }
-      
+
       if (isHeader) {
         return ''
       }
-      
+
       const dataCells = cells.map(cell => cell.trim())
       tableRows.push(`<tr>${dataCells.map(c => `<td class="border border-border px-4 py-2">${c}</td>`).join('')}</tr>`)
       return ''
