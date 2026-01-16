@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import html2canvas from 'html2canvas-pro'
+import { jsPDF } from 'jspdf'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -158,9 +160,6 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
     setIsExporting(true)
 
     try {
-      const html2pdfModule = await import('html2pdf.js')
-      const html2pdf = html2pdfModule.default || html2pdfModule
-
       const element = contentRef.current.cloneNode(true) as HTMLElement
       const tempContainer = document.createElement('div')
       tempContainer.style.position = 'absolute'
@@ -189,25 +188,38 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
 
       document.body.appendChild(tempContainer)
 
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename: `research-${session.query ? session.query.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-') : 'shared'}-${Date.now()}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          logging: false
-        },
-        jsPDF: {
-          unit: 'mm' as const,
-          format: 'a4' as const,
-          orientation: 'portrait' as const
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      // 使用 html2canvas 将 DOM 转换为 canvas
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      })
+
+      // 计算分页
+      const imgWidth = 210 // A4 宽度 (mm)
+      const pageHeight = 297 // A4 高度 (mm)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+
+      // 创建 PDF
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      let position = 0
+
+      // 添加第一页
+      const imgData = canvas.toDataURL('image/jpeg', 0.98)
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      // 添加后续页面
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
       }
 
-      await html2pdf().set(opt).from(tempContainer).save()
+      const filename = `research-${session.query ? session.query.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-') : 'shared'}-${Date.now()}.pdf`
+      pdf.save(filename)
 
       document.body.removeChild(tempContainer)
 
