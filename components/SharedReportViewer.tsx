@@ -72,7 +72,7 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
 
   // 滚动监听 - 更新当前激活的标题
   useEffect(() => {
-    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+    const scrollContainer = scrollAreaRef.current
     if (!scrollContainer) return
 
     const handleScroll = () => {
@@ -87,14 +87,15 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
       if (headingElements.length === 0) return
 
       // 找到当前可见的标题
-      const containerRect = scrollContainer.getBoundingClientRect()
-      const scrollTop = scrollContainer.scrollTop || 0
+      const scrollTop = scrollContainer.scrollTop
 
       let activeId = headings[0].id
 
       for (let i = headingElements.length - 1; i >= 0; i--) {
         const element = headingElements[i]
-        const elementTop = element.offsetTop
+        if (!element) continue
+
+        const elementTop = element.offsetTop - scrollContainer.offsetTop
 
         if (elementTop <= scrollTop + 150) {
           activeId = headings[i].id
@@ -113,25 +114,30 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
     }
 
     scrollContainer.addEventListener('scroll', debouncedScroll)
-    handleScroll() // 初始化时执行一次
+    // 延迟执行初始化，确保 DOM 已渲染
+    const initTimer = setTimeout(handleScroll, 100)
 
     return () => {
       scrollContainer.removeEventListener('scroll', debouncedScroll)
       clearTimeout(timeoutId)
+      clearTimeout(initTimer)
     }
   }, [formattedContent.headings])
 
   // 点击目录项滚动到对应位置
   const handleHeadingClick = useCallback((headingId: string) => {
     const element = document.getElementById(headingId)
-    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+    const scrollContainer = scrollAreaRef.current
 
     if (element && scrollContainer) {
-      const elementTop = element.offsetTop
+      // 计算元素相对于滚动容器的位置
+      const elementTop = element.offsetTop - scrollContainer.offsetTop
+
       scrollContainer.scrollTo({
         top: elementTop - 100, // 留出一些顶部空间
         behavior: 'smooth'
       })
+
       setActiveHeading(headingId)
     }
   }, [])
