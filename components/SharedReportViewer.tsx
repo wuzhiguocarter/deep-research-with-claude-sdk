@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -14,6 +13,7 @@ import {
 import { Download, FileText, File, Share2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyShareLink } from '@/lib/share'
+import { TableOfContents, extractHeadings, addHeadingIds, type Heading } from '@/components/TableOfContents'
 
 interface SharedReportViewerProps {
   sessionId: string
@@ -24,7 +24,10 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeHeading, setActiveHeading] = useState<string>('')
+
   const contentRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   // 加载分享的研究报告
   useEffect(() => {
@@ -55,6 +58,83 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
 
     loadSharedSession()
   }, [sessionId])
+
+  // 格式化 Markdown 并提取标题
+  const formattedContent = useMemo(() => {
+    if (!session?.result) return { html: '', headings: [] }
+
+    const html = formatMarkdown(session.result)
+    const htmlWithIds = addHeadingIds(html)
+    const headings = extractHeadings(htmlWithIds)
+
+    return { html: htmlWithIds, headings }
+  }, [session])
+
+  // 滚动监听 - 更新当前激活的标题
+  useEffect(() => {
+    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+    if (!scrollContainer) return
+
+    const handleScroll = () => {
+      const headings = formattedContent.headings
+      if (headings.length === 0) return
+
+      // 获取所有标题元素
+      const headingElements = headings
+        .map(h => document.getElementById(h.id))
+        .filter(Boolean) as HTMLElement[]
+
+      if (headingElements.length === 0) return
+
+      // 找到当前可见的标题
+      const containerRect = scrollContainer.getBoundingClientRect()
+      const scrollTop = scrollContainer.scrollTop || 0
+
+      let activeId = headings[0].id
+
+      for (let i = headingElements.length - 1; i >= 0; i--) {
+        const element = headingElements[i]
+        const elementTop = element.offsetTop
+
+        if (elementTop <= scrollTop + 150) {
+          activeId = headings[i].id
+          break
+        }
+      }
+
+      setActiveHeading(activeId)
+    }
+
+    // 使用防抖优化性能
+    let timeoutId: NodeJS.Timeout
+    const debouncedScroll = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(handleScroll, 50)
+    }
+
+    scrollContainer.addEventListener('scroll', debouncedScroll)
+    handleScroll() // 初始化时执行一次
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', debouncedScroll)
+      clearTimeout(timeoutId)
+    }
+  }, [formattedContent.headings])
+
+  // 点击目录项滚动到对应位置
+  const handleHeadingClick = useCallback((headingId: string) => {
+    const element = document.getElementById(headingId)
+    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+
+    if (element && scrollContainer) {
+      const elementTop = element.offsetTop
+      scrollContainer.scrollTo({
+        top: elementTop - 100, // 留出一些顶部空间
+        behavior: 'smooth'
+      })
+      setActiveHeading(headingId)
+    }
+  }, [])
 
   // 导出为Markdown
   const exportMarkdown = useCallback(() => {
@@ -244,16 +324,26 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-hidden p-0">
-          <ScrollArea className="h-full w-full">
+        <CardContent className="flex-1 overflow-hidden p-0 flex">
+          {/* 正文内容区域 */}
+          <div className="flex-1 overflow-y-auto" ref={scrollAreaRef}>
             <div className="p-8 max-w-5xl mx-auto">
               <div
                 ref={contentRef}
-                className="prose prose-lg max-w-none prose-headings:font-bold prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:text-pink-600 prose-pre:bg-muted prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: formatMarkdown(session.result) }}
+                className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:text-pink-600 prose-pre:bg-muted prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground"
+                dangerouslySetInnerHTML={{ __html: formattedContent.html }}
               />
             </div>
-          </ScrollArea>
+          </div>
+
+          {/* 右侧目录 */}
+          {formattedContent.headings.length > 0 && (
+            <TableOfContents
+              headings={formattedContent.headings}
+              activeId={activeHeading}
+              onHeadingClick={handleHeadingClick}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
