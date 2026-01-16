@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Maximize2, Minimize2 } from 'lucide-react'
 
 interface StreamingCanvasProps {
   sessionId: string | null
@@ -25,7 +27,71 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState('')
   const [isConnected, setIsConnected] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // 进入全屏
+  const enterFullscreen = useCallback(() => {
+    if (containerRef.current) {
+      if (containerRef.current.requestFullscreen) {
+        containerRef.current.requestFullscreen()
+      } else if ((containerRef.current as any).webkitRequestFullscreen) {
+        (containerRef.current as any).webkitRequestFullscreen()
+      } else if ((containerRef.current as any).mozRequestFullScreen) {
+        (containerRef.current as any).mozRequestFullScreen()
+      } else if ((containerRef.current as any).msRequestFullscreen) {
+        (containerRef.current as any).msRequestFullscreen()
+      }
+    }
+  }, [])
+
+  // 退出全屏
+  const exitFullscreen = useCallback(() => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen()
+    } else if ((document as any).mozCancelFullScreen) {
+      (document as any).mozCancelFullScreen()
+    } else if ((document as any).msExitFullscreen) {
+      (document as any).msExitFullscreen()
+    }
+  }, [])
+
+  // 切换全屏
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      exitFullscreen()
+    } else {
+      enterFullscreen()
+    }
+  }, [isFullscreen, enterFullscreen, exitFullscreen])
+
+  // 监听全屏状态变化
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isCurrentlyFullscreen)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('msfullscreenchange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange)
+    }
+  }, [])
 
   useEffect(() => {
     if (!sessionId || !isActive) {
@@ -184,50 +250,70 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span>📝 实时研究画布</span>
-            {isConnected && (
-              <Badge variant="secondary" className="animate-pulse">
-                实时更新中
+    <div
+      ref={containerRef}
+      className={isFullscreen
+        ? 'fixed inset-0 z-50 bg-background p-4 flex flex-col'
+        : ''
+      }
+    >
+      <Card className={isFullscreen ? 'flex-1 flex flex-col h-full' : ''}>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>📝 实时研究画布</span>
+              {isConnected && (
+                <Badge variant="secondary" className="animate-pulse">
+                  实时更新中
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{step}</span>
+              <Badge variant={status === 'completed' ? 'default' : status === 'failed' ? 'destructive' : 'secondary'}>
+                {Math.round(progress)}%
               </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{step}</span>
-            <Badge variant={status === 'completed' ? 'default' : status === 'failed' ? 'destructive' : 'secondary'}>
-              {Math.round(progress)}%
-            </Badge>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="relative">
-          {/* Progress bar */}
-          <div className="w-full bg-secondary rounded-full h-2 mb-4">
-            <div
-              className="bg-primary h-2 rounded-full transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFullscreen}
+                className="ml-2"
+                title={isFullscreen ? '退出全屏' : '全屏'}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={isFullscreen ? 'flex-1 flex flex-col min-h-0' : ''}>
+          <div className="relative flex-1 flex flex-col min-h-0">
+            {/* Progress bar */}
+            <div className="w-full bg-secondary rounded-full h-2 mb-4 flex-shrink-0">
+              <div
+                className="bg-primary h-2 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
 
-          {/* Content canvas */}
-          <ScrollArea className="h-[500px] w-full rounded-md border p-4 bg-background">
-            <div
-              ref={scrollRef}
-              className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: formatContent(content) }}
-            />
-            
-            {/* Cursor effect when streaming */}
-            {isConnected && content && (
-              <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-1" />
-            )}
-          </ScrollArea>
-        </div>
-      </CardContent>
-    </Card>
+            {/* Content canvas */}
+            <ScrollArea className={isFullscreen
+              ? 'flex-1 w-full rounded-md border p-4 bg-background min-h-0'
+              : 'h-[500px] w-full rounded-md border p-4 bg-background'
+            }>
+              <div
+                ref={scrollRef}
+                className="prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: formatContent(content) }}
+              />
+
+              {/* Cursor effect when streaming */}
+              {isConnected && content && (
+                <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-1" />
+              )}
+            </ScrollArea>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
