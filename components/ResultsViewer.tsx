@@ -3,17 +3,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { Maximize2, Minimize2 } from 'lucide-react'
+import { Maximize2, Minimize2, Download, FileText, File } from 'lucide-react'
 
 interface ResultsViewerProps {
   result: string
-  onDownload: () => void
+  query?: string
 }
 
-export function ResultsViewer({ result, onDownload }: ResultsViewerProps) {
+export function ResultsViewer({ result, query }: ResultsViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   // 进入全屏
   const enterFullscreen = useCallback(() => {
@@ -51,6 +59,93 @@ export function ResultsViewer({ result, onDownload }: ResultsViewerProps) {
       enterFullscreen()
     }
   }, [isFullscreen, enterFullscreen, exitFullscreen])
+
+  // 导出为Markdown
+  const exportMarkdown = useCallback(() => {
+    if (!result) return
+
+    const blob = new Blob([result], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `research-${query ? query.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-') : 'export'}-${Date.now()}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [result, query])
+
+  // 导出为PDF
+  const exportPDF = useCallback(async () => {
+    if (!contentRef.current || !result) return
+
+    setIsExporting(true)
+
+    try {
+      // 动态导入html2pdf以避免SSR问题
+      const html2pdfModule = await import('html2pdf.js')
+      const html2pdf = html2pdfModule.default || html2pdfModule
+
+      // 创建临时容器用于PDF生成
+      const element = contentRef.current.cloneNode(true) as HTMLElement
+      const tempContainer = document.createElement('div')
+      tempContainer.style.position = 'absolute'
+      tempContainer.style.left = '-9999px'
+      tempContainer.style.width = '210mm'  // A4宽度
+      tempContainer.style.padding = '20mm'
+      tempContainer.style.backgroundColor = '#ffffff'
+      tempContainer.style.color = '#000000'
+      tempContainer.className = 'prose prose-sm max-w-none'
+      tempContainer.innerHTML = element.innerHTML
+
+      // 添加标题
+      const title = document.createElement('h1')
+      title.textContent = query || '研究报告'
+      title.style.fontSize = '24px'
+      title.style.fontWeight = 'bold'
+      title.style.marginBottom = '20px'
+      title.style.color = '#000000'
+      tempContainer.insertBefore(title, tempContainer.firstChild)
+
+      // 添加日期
+      const date = document.createElement('p')
+      date.textContent = `生成时间: ${new Date().toLocaleString('zh-CN')}`
+      date.style.fontSize = '12px'
+      date.style.color = '#666666'
+      date.style.marginBottom = '20px'
+      tempContainer.insertBefore(date, title.nextSibling)
+
+      document.body.appendChild(tempContainer)
+
+      // 配置PDF选项
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `research-${query ? query.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-') : 'export'}-${Date.now()}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: {
+          unit: 'mm' as const,
+          format: 'a4' as const,
+          orientation: 'portrait' as const
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      }
+
+      // 生成PDF
+      await html2pdf().set(opt).from(tempContainer).save()
+
+      document.body.removeChild(tempContainer)
+    } catch (error) {
+      console.error('PDF导出失败:', error)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [result, query])
 
   // 监听全屏状态变化
   useEffect(() => {
@@ -92,9 +187,24 @@ export function ResultsViewer({ result, onDownload }: ResultsViewerProps) {
           <CardTitle className="flex items-center justify-between">
             <span>Research Results</span>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={onDownload}>
-                Download
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isExporting}>
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? '导出中...' : '导出'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={exportMarkdown}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    导出为 Markdown
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportPDF} disabled={isExporting}>
+                    <File className="h-4 w-4 mr-2" />
+                    导出为 PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="ghost"
                 size="icon"
@@ -112,6 +222,7 @@ export function ResultsViewer({ result, onDownload }: ResultsViewerProps) {
             : 'h-[600px] w-full rounded-md border p-4'
           }>
             <div
+              ref={contentRef}
               className="prose prose-sm max-w-none prose-headings:font-bold prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:text-pink-600 prose-pre:bg-muted prose-blockquote:border-l-4 prose-blockquote:border-muted-foreground"
               dangerouslySetInnerHTML={{ __html: formattedContent }}
             />

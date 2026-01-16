@@ -91,20 +91,6 @@ export default function ResearchPage() {
     }
   }
 
-  const downloadResult = () => {
-    if (!currentSession?.result) return
-
-    const blob = new Blob([currentSession.result], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `research-${currentSession.id}.md`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -124,7 +110,7 @@ export default function ResearchPage() {
               isActive={isStreaming}
             />
           ) : currentSession?.result && currentSession.status === 'completed' ? (
-            <ResultsViewer result={currentSession.result} onDownload={downloadResult} />
+            <ResultsViewer result={currentSession.result} query={currentSession.query} />
           ) : null}
         </div>
 

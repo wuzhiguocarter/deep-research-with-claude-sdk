@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Maximize2, Minimize2 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Maximize2, Minimize2, Download, FileText, File } from 'lucide-react'
 
 interface StreamingCanvasProps {
   sessionId: string | null
@@ -28,8 +34,10 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
   const [status, setStatus] = useState('')
   const [isConnected, setIsConnected] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   // 进入全屏
   const enterFullscreen = useCallback(() => {
@@ -67,6 +75,93 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
       enterFullscreen()
     }
   }, [isFullscreen, enterFullscreen, exitFullscreen])
+
+  // 导出为Markdown
+  const exportMarkdown = useCallback(() => {
+    if (!content) return
+
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `research-${sessionId || 'live'}-${Date.now()}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [content, sessionId])
+
+  // 导出为PDF
+  const exportPDF = useCallback(async () => {
+    if (!contentRef.current || !content) return
+
+    setIsExporting(true)
+
+    try {
+      // 动态导入html2pdf以避免SSR问题
+      const html2pdfModule = await import('html2pdf.js')
+      const html2pdf = html2pdfModule.default || html2pdfModule
+
+      // 创建临时容器用于PDF生成
+      const element = contentRef.current.cloneNode(true) as HTMLElement
+      const tempContainer = document.createElement('div')
+      tempContainer.style.position = 'absolute'
+      tempContainer.style.left = '-9999px'
+      tempContainer.style.width = '210mm'  // A4宽度
+      tempContainer.style.padding = '20mm'
+      tempContainer.style.backgroundColor = '#ffffff'
+      tempContainer.style.color = '#000000'
+      tempContainer.className = 'prose prose-sm max-w-none'
+      tempContainer.innerHTML = element.innerHTML
+
+      // 添加标题
+      const title = document.createElement('h1')
+      title.textContent = '实时研究画布'
+      title.style.fontSize = '24px'
+      title.style.fontWeight = 'bold'
+      title.style.marginBottom = '20px'
+      title.style.color = '#000000'
+      tempContainer.insertBefore(title, tempContainer.firstChild)
+
+      // 添加日期
+      const date = document.createElement('p')
+      date.textContent = `生成时间: ${new Date().toLocaleString('zh-CN')}`
+      date.style.fontSize = '12px'
+      date.style.color = '#666666'
+      date.style.marginBottom = '20px'
+      tempContainer.insertBefore(date, title.nextSibling)
+
+      document.body.appendChild(tempContainer)
+
+      // 配置PDF选项
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `research-${sessionId || 'live'}-${Date.now()}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: {
+          unit: 'mm' as const,
+          format: 'a4' as const,
+          orientation: 'portrait' as const
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      }
+
+      // 生成PDF
+      await html2pdf().set(opt).from(tempContainer).save()
+
+      document.body.removeChild(tempContainer)
+    } catch (error) {
+      console.error('PDF导出失败:', error)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [content, sessionId])
 
   // 监听全屏状态变化
   useEffect(() => {
@@ -273,6 +368,24 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
               <Badge variant={status === 'completed' ? 'default' : status === 'failed' ? 'destructive' : 'secondary'}>
                 {Math.round(progress)}%
               </Badge>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isExporting || !content}>
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? '导出中...' : '导出'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={exportMarkdown} disabled={!content}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    导出为 Markdown
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportPDF} disabled={isExporting || !content}>
+                    <File className="h-4 w-4 mr-2" />
+                    导出为 PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="ghost"
                 size="icon"
@@ -302,9 +415,13 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
             }>
               <div
                 ref={scrollRef}
-                className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: formatContent(content) }}
-              />
+              >
+                <div
+                  ref={contentRef}
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: formatContent(content) }}
+                />
+              </div>
 
               {/* Cursor effect when streaming */}
               {isConnected && content && (
