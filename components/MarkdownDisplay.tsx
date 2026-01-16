@@ -1,11 +1,10 @@
 'use client'
 
-import { useMemo } from 'import { useMemo } from 'react'
+import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Button } from '@/assistant/assistant'
-import { Separator } from '@/assistant/separator'
+import { Button } from '@/components/ui/button'
 
 interface MarkdownDisplayProps {
   markdown: string
@@ -65,7 +64,7 @@ export function MarkdownDisplay({ markdown, onDownload }: MarkdownDisplayProps) 
     h2: ({ node }: any) => (
       <h2 className="text-2xl font-bold mt-8 mb-4">{node.children}</h2>
     ),
-    h3: ({ node }: any} => (
+    h3: ({ node }: any) => (
       <h3 className="text-xl font-semibold mt-6 mb-3">{node.children}</h3>
     ),
     h4: ({ node }: any) => (
