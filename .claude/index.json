@@ -1,0 +1,218 @@
+{
+  "metadata": {
+    "generatedAt": "2026-01-17T00:50:30+08:00",
+    "projectName": "deep-research-with-claude-sdk",
+    "version": "0.1.0",
+    "lastCommit": "87261c2"
+  },
+  "summary": {
+    "totalFiles": 42,
+    "scannedFiles": 42,
+    "coverage": 100,
+    "languageBreakdown": {
+      "TypeScript": 28,
+      "TSX": 10,
+      "Prisma": 1,
+      "SQL": 1,
+      "JSON": 2
+    },
+    "truncated": false
+  },
+  "modules": [
+    {
+      "name": "root",
+      "path": "/",
+      "type": "root",
+      "description": "项目根目录",
+      "entryPoints": [
+        "app/page.tsx",
+        "app/layout.tsx"
+      ],
+      "documentation": "CLAUDE.md",
+      "coverage": 100,
+      "gaps": []
+    },
+    {
+      "name": "app",
+      "path": "/app",
+      "type": "nextjs-app",
+      "description": "Next.js App Router - 包含页面与 API 路由",
+      "entryPoints": [
+        "app/page.tsx",
+        "app/research/page.tsx",
+        "app/layout.tsx"
+      ],
+      "apis": [
+        "POST /api/research",
+        "GET /api/research/[id]",
+        "GET /api/research/[id]/stream",
+        "GET /api/history",
+        "GET /api/history/[id]",
+        "DELETE /api/history/[id]"
+      ],
+      "documentation": "app/CLAUDE.md",
+      "coverage": 100,
+      "gaps": []
+    },
+    {
+      "name": "components",
+      "path": "/components",
+      "type": "react-components",
+      "description": "React 组件库 - UI 基础组件与功能组件",
+      "entryPoints": [
+        "components/ResearchForm.tsx",
+        "components/StreamingCanvas.tsx",
+        "components/ResultsViewer.tsx",
+        "components/HistoryPanel.tsx"
+      ],
+      "uiComponents": [
+        "button",
+        "card",
+        "input",
+        "textarea",
+        "select",
+        "badge",
+        "scroll-area",
+        "separator",
+        "dropdown-menu"
+      ],
+      "featureComponents": [
+        "ResearchForm",
+        "StreamingCanvas",
+        "ResultsViewer",
+        "HistoryPanel",
+        "SharedReportViewer",
+        "TableOfContents",
+        "ProgressTracker",
+        "MarkdownDisplay",
+        "ResearchPDF"
+      ],
+      "documentation": "components/CLAUDE.md",
+      "coverage": 100,
+      "gaps": []
+    },
+    {
+      "name": "lib",
+      "path": "/lib",
+      "type": "utilities",
+      "description": "工具库与核心业务逻辑",
+      "entryPoints": [
+        "lib/research/service.ts",
+        "lib/db.ts"
+      ],
+      "services": [
+        "lib/research/service.ts"
+      ],
+      "utilities": [
+        "lib/db.ts",
+        "lib/markdown.ts",
+        "lib/share.ts",
+        "lib/utils.ts"
+      ],
+      "documentation": "lib/CLAUDE.md",
+      "coverage": 100,
+      "gaps": []
+    },
+    {
+      "name": "prisma",
+      "path": "/prisma",
+      "type": "database",
+      "description": "数据库层 - Prisma ORM 与迁移",
+      "entryPoints": [
+        "prisma/schema.prisma"
+      ],
+      "models": [
+        "ResearchSession"
+      ],
+      "migrations": [
+        "20260112182212_init"
+      ],
+      "documentation": "prisma/CLAUDE.md",
+      "coverage": 100,
+      "gaps": []
+    }
+  ],
+  "ignoredPatterns": [
+    "node_modules/**",
+    ".next/**",
+    ".git/**",
+    ".github/**",
+    "dist/**",
+    "build/**",
+    "*.lock",
+    "*.log",
+    "*.bin",
+    "*.pdf",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.mp4",
+    "*.zip",
+    "*.tar",
+    "*.gz"
+  ],
+  "ignoredStats": {
+    "node_modules": "约 15000+ 个文件（依赖包）",
+    ".next": "构建产物（未统计）"
+  },
+  "keyFiles": [
+    {
+      "path": "/package.json",
+      "description": "项目依赖与脚本配置"
+    },
+    {
+      "path": "/tsconfig.json",
+      "description": "TypeScript 编译配置"
+    },
+    {
+      "path": "/next.config.ts",
+      "description": "Next.js 框架配置"
+    },
+    {
+      "path": "/eslint.config.mjs",
+      "description": "ESLint 代码检查配置"
+    },
+    {
+      "path": "/.env.example",
+      "description": "环境变量示例"
+    },
+    {
+      "path": "/README.md",
+      "description": "项目说明文档"
+    }
+  ],
+  "testing": {
+    "status": "none",
+    "framework": null,
+    "coverage": 0,
+    "gaps": [
+      "无单元测试",
+      "无集成测试",
+      "无 E2E 测试"
+    ],
+    "recommendations": [
+      "添加 Vitest 或 Jest 进行单元测试",
+      "使用 Playwright 进行 E2E 测试",
+      "添加 API 集成测试"
+    ]
+  },
+  "recommendations": {
+    "priority": [
+      "补充测试覆盖（当前 0%）",
+      "添加 API 错误处理日志",
+      "优化数据库查询性能"
+    ],
+    "niceToHave": [
+      "添加 TypeScript 严格模式检查",
+      "实现更细粒度的错误分类",
+      "添加性能监控与追踪"
+    ]
+  },
+  "nextSteps": [
+    "阅读根级 CLAUDE.md 了解项目全貌",
+    "查看各模块的 CLAUDE.md 了解详细实现",
+    "重点关注 lib/research/service.ts 的 Claude Agent SDK 集成",
+    "了解 components/StreamingCanvas.tsx 的 SSE 实时更新机制"
+  ]
+}

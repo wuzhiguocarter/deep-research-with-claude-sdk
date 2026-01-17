@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +13,7 @@ import {
 import { Maximize2, Minimize2, Download, FileText, File, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyShareLink } from '@/lib/share'
-import { TableOfContents, extractHeadings, addHeadingIds, type Heading } from '@/components/TableOfContents'
+import { TableOfContents, extractHeadings, addHeadingIds } from '@/components/TableOfContents'
 
 interface StreamingCanvasProps {
   sessionId: string | null
@@ -163,53 +162,79 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
 
   // 全屏模式下的滚动监听 - 更新当前激活的标题
   useEffect(() => {
+    // 只在全屏模式下启用滚动监听
     if (!isFullscreen) return
 
-    const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement
+    const scrollContainer = scrollRef.current
     if (!scrollContainer || formattedContent.headings.length === 0) return
 
-    // 使用 IntersectionObserver 更精确地检测可见标题
-    const observerOptions = {
-      root: scrollContainer,
-      rootMargin: '-100px 0px -70% 0px',
-      threshold: 0
-    }
+    let observer: IntersectionObserver | null = null
+    const timeoutIds: NodeJS.Timeout[] = [] // 追踪所有定时器
 
-    const observer = new IntersectionObserver((entries) => {
-      const intersectingHeadings = entries
-        .filter(entry => entry.isIntersecting)
-        .map(entry => entry.target.id)
-
-      if (intersectingHeadings.length > 0) {
-        const activeId = intersectingHeadings[intersectingHeadings.length - 1]
-        setActiveHeading(activeId)
+    // 使用 requestAnimationFrame 确保 DOM 已渲染
+    requestAnimationFrame(() => {
+      // 使用 IntersectionObserver 更精确地检测可见标题
+      const observerOptions = {
+        root: scrollContainer,
+        rootMargin: '-100px 0px -60% 0px', // 统一配置为 60%
+        threshold: [0, 0.25, 0.5, 0.75, 1]
       }
-    }, observerOptions)
 
-    const headingElements = formattedContent.headings
-      .map(h => document.getElementById(h.id))
-      .filter(Boolean) as HTMLElement[]
+      observer = new IntersectionObserver((entries) => {
+        const intersectingHeadings = entries
+          .filter(entry => entry.isIntersecting)
+          .map(entry => entry.target.id)
 
-    headingElements.forEach(element => {
-      observer.observe(element)
+        if (intersectingHeadings.length > 0) {
+          const activeId = intersectingHeadings[intersectingHeadings.length - 1]
+          setActiveHeading(activeId)
+        }
+      }, observerOptions)
+
+      // 查询标题元素（DOM 已渲染）
+      const queryHeadingElements = (retryCount = 0) => {
+        const headingElements = formattedContent.headings
+          .map(h => document.getElementById(h.id))
+          .filter(Boolean) as HTMLElement[]
+
+        if (headingElements.length === 0 && retryCount < 3) {
+          // 重试机制 - 记录定时器 ID 以便清理
+          const timeoutId = setTimeout(() => queryHeadingElements(retryCount + 1), 100)
+          timeoutIds.push(timeoutId)
+          return
+        }
+
+        // 观察元素
+        headingElements.forEach(element => {
+          observer!.observe(element)
+        })
+
+        // 初始化第一个标题
+        if (headingElements.length > 0) {
+          setActiveHeading(formattedContent.headings[0].id)
+        }
+      }
+
+      queryHeadingElements()
     })
 
-    if (headingElements.length > 0) {
-      setActiveHeading(formattedContent.headings[0].id)
-    }
-
+    // Cleanup 函数
     return () => {
-      observer.disconnect()
+      // 清理所有定时器
+      timeoutIds.forEach(id => clearTimeout(id))
+      if (observer) {
+        observer.disconnect()
+      }
     }
-  }, [isFullscreen, formattedContent.headings])
+  }, [isFullscreen, formattedContent.headings]) // 仅依赖 headings，避免频繁重建
 
   // 点击目录项滚动到对应位置
   const handleHeadingClick = useCallback((headingId: string) => {
     const element = document.getElementById(headingId)
-    const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement
+    const scrollContainer = scrollRef.current
 
     if (element && scrollContainer) {
-      const elementTop = element.offsetTop - (scrollRef.current?.offsetTop || 0)
+      const elementTop = element.offsetTop - scrollContainer.offsetTop
 
       scrollContainer.scrollTo({
         top: elementTop - 100,
@@ -271,10 +296,7 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
             // Auto-scroll to bottom
             setTimeout(() => {
               if (scrollRef.current) {
-                const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement
-                if (viewport) {
-                  viewport.scrollTop = viewport.scrollHeight
-                }
+                scrollRef.current.scrollTop = scrollRef.current.scrollHeight
               }
             }, 100)
           }
@@ -401,23 +423,24 @@ export function StreamingCanvas({ sessionId, isActive }: StreamingCanvasProps) {
 
             {/* Content area with TOC in fullscreen */}
             <div className={isFullscreen ? 'flex-1 flex overflow-hidden' : ''}>
-              <ScrollArea className={isFullscreen
-                ? 'flex-1 w-full rounded-md border p-4 bg-background min-h-0'
-                : 'h-[500px] w-full rounded-md border p-4 bg-background'
-              }>
-                <div ref={scrollRef}>
-                  <div
-                    ref={contentRef}
-                    className="prose prose-sm max-w-none prose-headings:scroll-mt-24"
-                    dangerouslySetInnerHTML={{ __html: formattedContent.html }}
-                  />
-                </div>
+              <div
+                ref={scrollRef}
+                className={isFullscreen
+                  ? 'flex-1 overflow-y-auto rounded-md border p-4 bg-background min-h-0'
+                  : 'h-[500px] overflow-y-auto w-full rounded-md border p-4 bg-background'
+                }
+              >
+                <div
+                  ref={contentRef}
+                  className="prose prose-sm max-w-none prose-headings:scroll-mt-24"
+                  dangerouslySetInnerHTML={{ __html: formattedContent.html }}
+                />
 
                 {/* Cursor effect when streaming */}
                 {isConnected && content && (
                   <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-1" />
                 )}
-              </ScrollArea>
+              </div>
 
               {/* TOC in fullscreen mode */}
               {isFullscreen && formattedContent.headings.length > 0 && (

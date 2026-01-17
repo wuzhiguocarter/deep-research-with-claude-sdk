@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { ChevronRight } from 'lucide-react'
@@ -39,18 +39,18 @@ export function TableOfContents({ headings, activeId, onHeadingClick }: TableOfC
                 key={heading.id}
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start text-left hover:bg-muted/50",
+                  "w-full justify-start text-left transition-all duration-200 hover:bg-accent/50 dark:hover:bg-accent/50",
                   heading.level === 1 && "font-semibold",
                   heading.level === 2 && "pl-4 text-sm",
                   heading.level === 3 && "pl-8 text-xs text-muted-foreground",
-                  activeId === heading.id && "bg-muted font-medium"
+                  activeId === heading.id && "bg-primary/10 text-primary font-semibold border-l-2 border-primary dark:bg-primary/20"
                 )}
                 onClick={() => onHeadingClick(heading.id)}
               >
                 <ChevronRight
                   className={cn(
-                    "h-3 w-3 mr-1 shrink-0",
-                    activeId === heading.id ? "opacity-100" : "opacity-0"
+                    "h-3 w-3 mr-1 shrink-0 transition-all duration-200",
+                    activeId === heading.id ? "opacity-100 text-primary" : "opacity-0"
                   )}
                 />
                 <span className="truncate">{heading.text}</span>

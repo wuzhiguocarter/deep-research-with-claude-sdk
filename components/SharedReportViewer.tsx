@@ -77,44 +77,67 @@ export function SharedReportViewer({ sessionId }: SharedReportViewerProps) {
     const scrollContainer = scrollAreaRef.current
     if (!scrollContainer || formattedContent.headings.length === 0) return
 
-    // 使用 IntersectionObserver 更精确地检测可见标题
-    const observerOptions = {
-      root: scrollContainer,
-      rootMargin: '-100px 0px -70% 0px', // 顶部偏移100px，底部留30%空间
-      threshold: 0
-    }
+    let observer: IntersectionObserver | null = null
+    const timeoutIds: NodeJS.Timeout[] = [] // 追踪所有定时器
 
-    const observer = new IntersectionObserver((entries) => {
-      // 找到所有相交的标题
-      const intersectingHeadings = entries
-        .filter(entry => entry.isIntersecting)
-        .map(entry => entry.target.id)
-
-      if (intersectingHeadings.length > 0) {
-        // 使用最后一个相交的标题（最靠下的那个）
-        const activeId = intersectingHeadings[intersectingHeadings.length - 1]
-        setActiveHeading(activeId)
+    // 使用 requestAnimationFrame 确保 DOM 已渲染
+    requestAnimationFrame(() => {
+      // 使用 IntersectionObserver 更精确地检测可见标题
+      const observerOptions = {
+        root: scrollContainer,
+        rootMargin: '-100px 0px -60% 0px', // 顶部偏移100px，底部留60%空间
+        threshold: [0, 0.25, 0.5, 0.75, 1] // 使用多个阈值提高准确性
       }
-    }, observerOptions)
 
-    // 观察所有标题元素
-    const headingElements = formattedContent.headings
-      .map(h => document.getElementById(h.id))
-      .filter(Boolean) as HTMLElement[]
+      observer = new IntersectionObserver((entries) => {
+        // 找到所有相交的标题
+        const intersectingHeadings = entries
+          .filter(entry => entry.isIntersecting)
+          .map(entry => entry.target.id)
 
-    headingElements.forEach(element => {
-      observer.observe(element)
+        if (intersectingHeadings.length > 0) {
+          // 使用最后一个相交的标题（最靠下的那个）
+          const activeId = intersectingHeadings[intersectingHeadings.length - 1]
+          setActiveHeading(activeId)
+        }
+      }, observerOptions)
+
+      // 查询标题元素，带重试机制
+      const queryHeadingElements = (retryCount = 0) => {
+        const headingElements = formattedContent.headings
+          .map(h => document.getElementById(h.id))
+          .filter(Boolean) as HTMLElement[]
+
+        if (headingElements.length === 0 && retryCount < 3) {
+          // 重试机制 - 记录定时器 ID 以便清理
+          const timeoutId = setTimeout(() => queryHeadingElements(retryCount + 1), 100)
+          timeoutIds.push(timeoutId)
+          return
+        }
+
+        // 观察所有标题元素
+        headingElements.forEach(element => {
+          observer!.observe(element)
+        })
+
+        // 初始化时设置第一个标题为激活状态
+        if (headingElements.length > 0) {
+          setActiveHeading(formattedContent.headings[0].id)
+        }
+      }
+
+      queryHeadingElements()
     })
 
-    // 初始化时设置第一个标题为激活状态
-    if (headingElements.length > 0) {
-      setActiveHeading(formattedContent.headings[0].id)
-    }
-
+    // Cleanup 函数
     return () => {
-      observer.disconnect()
+      // 清理所有定时器
+      timeoutIds.forEach(id => clearTimeout(id))
+      if (observer) {
+        observer.disconnect()
+      }
     }
-  }, [formattedContent.headings])
+  }, [formattedContent.headings]) // 仅依赖 headings，避免频繁重建
 
   // 点击目录项滚动到对应位置
   const handleHeadingClick = useCallback((headingId: string) => {
